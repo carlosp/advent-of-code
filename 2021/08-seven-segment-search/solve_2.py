@@ -2,46 +2,28 @@
 # -*- coding: utf-8 -*-
 import sys
 
-ALL_SEGMENTS = 'abcdefg'
-NUMBER_WITH_SEGMENTS = {
-	'abcefg'	: '0',
-	'cf'		: '1',
-	'acdeg'		: '2',
-	'acdfg'		: '3',
-	'bcdf'		: '4',
-	'abdfg'		: '5',
-	'abdefg'	: '6',
-	'acf'		: '7',
-	'abcdefg'	: '8',
-	'abcdfg'	: '9'
-}
-
-def filterByLength(length, patterns):
-	return next(pattern for pattern in patterns if len(pattern) == length)
-
-def filterByLengthAndSomeSegmentExcluded(length, segmentsToExcludeSome, patterns):
-	return next(pattern for pattern in patterns
-		if len(pattern) == length and any(segment not in pattern for segment in segmentsToExcludeSome))
-
-def extractSegments(lengthForCandidates, segmentsToExclude, patterns):
-	maybeX, maybeY = set(filterByLength(lengthForCandidates, patterns)) - set(segmentsToExclude)
-	patternWithXAndNotY = filterByLengthAndSomeSegmentExcluded(6, [maybeX, maybeY], patterns)
-	return (maybeX, maybeY) if maybeX in patternWithXAndNotY else (maybeY, maybeX)
-
 def solve(entries):
 	def processEntry(entry):
-		signalPatterns, outputValue = map(str.split, entry.split('|'))
+		findPattern = lambda size, contains=set(), containedIn=set('abcdefg'), exclude=[]: next(
+			pattern for pattern in signalPatterns
+			if len(pattern) == size and pattern > contains and pattern <= containedIn
+				and all(pattern != other for other in exclude)
+		)
 
-		f, c = extractSegments(2, [], signalPatterns)
-		a, = set(filterByLength(3, signalPatterns)) - set([c, f])
-		b, d = extractSegments(4, [c, f], signalPatterns)
-		g, e = extractSegments(7, [a, b, c, d, f], signalPatterns)
-		translation = str.maketrans(a + b + c + d + e + f + g, ALL_SEGMENTS)
+		signalPatterns, outputValue = [list(map(set, x)) for x in map(str.split, entry.split('|'))]
+		mappings = [None] * 10
+		mappings[1] = findPattern(size=2)
+		mappings[4] = findPattern(size=4)
+		mappings[7] = findPattern(size=3)
+		mappings[8] = findPattern(size=7)
+		mappings[3] = findPattern(size=5, contains=mappings[1])
+		mappings[9] = findPattern(size=6, contains=mappings[3])
+		mappings[5] = findPattern(size=5, containedIn=mappings[9], exclude=[mappings[3]])
+		mappings[2] = findPattern(size=5, exclude=[mappings[3], mappings[5]])
+		mappings[6] = findPattern(size=6, contains=mappings[5], exclude=[mappings[9]])
+		mappings[0] = findPattern(size=6, exclude=[mappings[6], mappings[9]])
 
-		return int(''.join(
-			NUMBER_WITH_SEGMENTS[''.join(sorted(segments.translate(translation)))]
-			for segments in outputValue
-		))
+		return int(''.join(map(str, map(mappings.index, outputValue))))
 
 	return sum(map(processEntry, entries))
 
