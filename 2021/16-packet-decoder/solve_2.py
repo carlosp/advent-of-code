@@ -1,39 +1,37 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import io
 import math
 import operator
 
-def parseLiteralPacket(binData, idx, _):
-	data = ''
-	while True:
-		data += binData[idx + 1:idx + 5]
-		idx += 5
+class BinaryStringIO(io.StringIO):
+	def read(_, *args):
+		return int(super().read(*args), 2)
 
-		if binData[idx - 5] == '0':
-			break
+def parseLiteralPacket(binStream, _):
+	data, lastPrefix = 0, 1
 
-	return idx, int(data, 2)
+	while lastPrefix:
+		lastPrefix = binStream.read(1)
+		data = 16 * data + binStream.read(4)
 
-def parseOperatorPacket(binData, idx, packageType):
-	lengthType = binData[idx]
-	idx += 1
+	return data
+
+def parseOperatorPacket(binStream, packageType):
+	lengthType = binStream.read(1)
 	subresults = []
 
-	if lengthType == '0':
-		lengthInBits = int(binData[idx:idx + 15], 2)
-		idx += 15
-		end = idx + lengthInBits
+	if lengthType == 0:
+		lengthInBits = binStream.read(15)
+		end = binStream.tell() + lengthInBits
 
-		while idx < end:
-			idx, subresult = parsePacket(binData, idx)
-			subresults += [subresult]
+		while binStream.tell() < end:
+			subresults += [parsePacket(binStream)]
 	else:
-		numSubpackages = int(binData[idx: idx + 11], 2)
-		idx += 11
+		numSubpackages = binStream.read(11)
 
 		for _ in range(numSubpackages):
-			idx, subresult = parsePacket(binData, idx)
-			subresults += [subresult]
+			subresults += [parsePacket(binStream)]
 
 	match packageType:
 		case 0: result = sum(subresults)
@@ -44,18 +42,18 @@ def parseOperatorPacket(binData, idx, packageType):
 		case 6: result = operator.lt(*subresults)
 		case 7: result = operator.eq(*subresults)
 
-	return idx, result
+	return int(result)
 
-def parsePacket(binData, idx):
-	_ = int(binData[idx:idx + 3], 2)
-	type = int(binData[idx + 3:idx + 6], 2)
+def parsePacket(binStream):
+	_ = binStream.read(3)
+	type = binStream.read(3)
 
-	return [parseOperatorPacket, parseLiteralPacket][type == 4](binData, idx + 6, type)
+	return [parseOperatorPacket, parseLiteralPacket][type == 4](binStream, type)
 
 def solve(hexData):
 	binData = bin(int(hexData, 16))[2:].zfill(4 * len(hexData))
 
-	return parsePacket(binData, 0)[1]
+	return parsePacket(BinaryStringIO(binData))
 
 
 if __name__ == '__main__':

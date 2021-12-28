@@ -1,51 +1,48 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import io
 
-def parseLiteralPacket(binData, idx, _):
-	data = ''
-	while True:
-		data += binData[idx + 1:idx + 5]
-		idx += 5
+class BinaryStringIO(io.StringIO):
+	def read(_, *args):
+		return int(super().read(*args), 2)
 
-		if binData[idx - 5] == '0':
-			break
+def parseLiteralPacket(binStream):
+	lastPrefix = 1
 
-	return idx, 0
+	while lastPrefix:
+		lastPrefix = binStream.read(1)
+		binStream.read(4)
 
-def parseOperatorPacket(binData, idx, _):
-	lengthType = binData[idx]
-	idx += 1
+	return 0
+
+def parseOperatorPacket(binStream):
+	lengthType = binStream.read(1)
 	result = 0
 
-	if lengthType == '0':
-		lengthInBits = int(binData[idx:idx + 15], 2)
-		idx += 15
-		end = idx + lengthInBits
+	if lengthType == 0:
+		lengthInBits = binStream.read(15)
+		end = binStream.tell() + lengthInBits
 
-		while idx < end:
-			idx, subresult = parsePacket(binData, idx)
-			result += subresult
+		while binStream.tell() < end:
+			result += parsePacket(binStream)
 	else:
-		numSubpackages = int(binData[idx: idx + 11], 2)
-		idx += 11
+		numSubpackages = binStream.read(11)
 
 		for _ in range(numSubpackages):
-			idx, subresult = parsePacket(binData, idx)
-			result += subresult
+			result += parsePacket(binStream)
 
-	return idx, result
+	return result
 
-def parsePacket(binData, idx):
-	version = int(binData[idx:idx + 3], 2)
-	type = int(binData[idx + 3:idx + 6], 2)
-	idx, subresult = [parseOperatorPacket, parseLiteralPacket][type == 4](binData, idx + 6, type)
+def parsePacket(binStream):
+	version = binStream.read(3)
+	type = binStream.read(3)
 
-	return idx, version + subresult
+	return version + [parseOperatorPacket, parseLiteralPacket][type == 4](binStream)
 
 def solve(hexData):
 	binData = bin(int(hexData, 16))[2:].zfill(4 * len(hexData))
 
-	return parsePacket(binData, 0)[1]
+	return parsePacket(BinaryStringIO(binData))
 
 
 if __name__ == '__main__':
