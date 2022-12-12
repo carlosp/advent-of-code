@@ -16,10 +16,10 @@ def parseOperation(operation):
 	}[op]
 
 	if op1 == op2:
-		return lambda item, *_: op(item, item)
+		return lambda item: op(item, item)
 	else:
 		v = int(op1) if op2 == 'old' else int(op2)
-		return lambda item, v=v: op(item, v)
+		return lambda item: op(item, v)
 
 def parseNotes(notes):
 	monkeys = [None] * len(notes)
