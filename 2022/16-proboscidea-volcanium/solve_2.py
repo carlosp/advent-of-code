@@ -22,9 +22,9 @@ class Cave(object):
 
 		return max(
 			pressureReleased1 + pressureReleased2
-			for closedValves1, pressureReleased1 in maxPressureReleasedByValvesOpen.items()
-			for closedValves2, pressureReleased2 in maxPressureReleasedByValvesOpen.items()
-			if not closedValves1 & closedValves2
+			for openValves1, pressureReleased1 in maxPressureReleasedByValvesOpen.items()
+			for openValves2, pressureReleased2 in maxPressureReleasedByValvesOpen.items()
+			if not openValves1 & openValves2
 		)
 
 	def _computeDistancesFloydWarshall(self):
