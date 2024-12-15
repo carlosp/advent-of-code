@@ -16,7 +16,7 @@ class Box:
 	def getOccupiedPositions(self) -> set[tuple[complex]]:
 		return set(self.position + i * 1j for i in range(self.width))
 
-	def getPositionsAfterMove(self, direction: complex) -> set[tuple[complex]]:
+	def getNewPositionsAfterMove(self, direction: complex) -> set[tuple[complex]]:
 		return set(self.position + i * 1j + direction for i in range(self.width)) - set(self.getOccupiedPositions())
 
 	def move(self, direction: complex) -> None:
@@ -33,7 +33,7 @@ def canMove(walls: set[complex], boxes: dict[complex, Box], position: complex, d
 
 	return all(
 		canMove(walls, boxes, movedPosition, direction, movedBoxes)
-		for movedPosition in currentBox.getPositionsAfterMove(direction)
+		for movedPosition in currentBox.getNewPositionsAfterMove(direction)
 	)
 
 def solve(warehouse: list[str], moves: str) -> int:
